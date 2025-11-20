@@ -1,5 +1,8 @@
 from rest_framework import serializers
 from . import models
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class RequestItemSerializer(serializers.ModelSerializer):
@@ -32,3 +35,38 @@ class ApprovalSerializer(serializers.ModelSerializer):
         model = models.Approval
         fields = ('id', 'purchase_request', 'approver', 'level', 'action', 'comment', 'created_at')
         read_only_fields = ('approver', 'created_at')
+
+
+class UserSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(source='profile.role', read_only=True)
+    password = serializers.CharField(write_only=True, required=False, allow_null=True)
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'role', 'password')
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        user = User(**validated_data)
+        if password:
+            user.set_password(password)
+        else:
+            # create unusable password if none provided
+            user.set_unusable_password()
+        user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance
+
+
+class RoleAssignSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    role = serializers.ChoiceField(choices=[r[0] for r in models.UserProfile.ROLE_CHOICES])
+

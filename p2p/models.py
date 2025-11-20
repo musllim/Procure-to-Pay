@@ -1,5 +1,32 @@
 from django.conf import settings
 from django.db import models
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
+
+
+class UserProfile(models.Model):
+    ROLE_STAFF = 'staff'
+    ROLE_APPROVER_L1 = 'approver_level_1'
+    ROLE_APPROVER_L2 = 'approver_level_2'
+    ROLE_FINANCE = 'finance'
+    ROLE_ADMIN = 'admin'
+
+    ROLE_CHOICES = [
+        (ROLE_STAFF, 'Staff'),
+        (ROLE_APPROVER_L1, 'Approver Level 1'),
+        (ROLE_APPROVER_L2, 'Approver Level 2'),
+        (ROLE_FINANCE, 'Finance'),
+        (ROLE_ADMIN, 'Admin'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    role = models.CharField(max_length=32, choices=ROLE_CHOICES, default=ROLE_STAFF)
+
+    def __str__(self):
+        return f"{self.user.username} ({self.role})"
+
 
 
 class PurchaseRequest(models.Model):

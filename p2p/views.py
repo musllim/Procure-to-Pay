@@ -21,6 +21,54 @@ def health_check(request):
     return Response(data)
 
 
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth import get_user_model
+
+
+class TokenObtainPairViewCustom(TokenObtainPairView):
+    """Wrapper in case we want to customize later (keeps import path stable)."""
+    pass
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def me(request):
+    """Return authenticated user info including role."""
+    from .serializers import UserSerializer
+
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def assign_role(request):
+    """Admin endpoint to assign role to a user. Only accessible by staff/superuser."""
+    if not request.user.is_staff:
+        return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+    from .serializers import RoleAssignSerializer
+    serializer = RoleAssignSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    user_id = serializer.validated_data['user_id']
+    role = serializer.validated_data['role']
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    try:
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    profile = getattr(user, 'profile', None)
+    if not profile:
+        from .models import UserProfile
+        profile = UserProfile.objects.create(user=user, role=role)
+    else:
+        profile.role = role
+        profile.save()
+    return Response({'detail': 'role assigned', 'user_id': user_id, 'role': role})
+
+
 class PurchaseRequestViewSet(viewsets.ModelViewSet):
     queryset = models.PurchaseRequest.objects.all().order_by('-created_at')
     serializer_class = serializers.PurchaseRequestSerializer
@@ -93,3 +141,72 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         receipt.validation_result = 'UNVALIDATED'
         receipt.save()
         return Response({'detail': 'Receipt submitted', 'receipt_id': receipt.pk}, status=status.HTTP_201_CREATED)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    """Admin/manageable User API. Staff can list/create/delete; ordinary users can view/update themselves.
+
+    Endpoints:
+    - list (staff only)
+    - retrieve (self or staff)
+    - create (staff only)
+    - update/partial_update (self or staff)
+    - destroy (staff only)
+    - change_password (POST to /users/{pk}/change_password/)
+    """
+
+    User = get_user_model()
+    queryset = User.objects.all().order_by('id')
+    serializer_class = serializers.UserSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return super().get_queryset()
+        return super().get_queryset().filter(pk=user.pk)
+
+    def create(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        # allow users to update themselves or staff to update anyone
+        target = self.get_object()
+        if request.user != target and not request.user.is_staff:
+            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'], url_path='change_password')
+    def change_password(self, request, pk=None):
+        user = self.get_object()
+        # allow staff to change any password without old password; users must provide old_password
+        new_password = request.data.get('new_password')
+        if not new_password:
+            return Response({'detail': 'new_password required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if request.user == user:
+            old_password = request.data.get('old_password')
+            if not old_password:
+                return Response({'detail': 'old_password required'}, status=status.HTTP_400_BAD_REQUEST)
+            if not user.check_password(old_password):
+                return Response({'detail': 'old_password does not match'}, status=status.HTTP_400_BAD_REQUEST)
+            user.set_password(new_password)
+            user.save()
+            return Response({'detail': 'password updated'})
+
+        # non-self request: only staff allowed
+        if not request.user.is_staff:
+            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        user.set_password(new_password)
+        user.save()
+        return Response({'detail': 'password updated by staff'})

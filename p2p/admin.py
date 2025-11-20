@@ -1,5 +1,25 @@
 from django.contrib import admin
 from . import models
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+
+User = get_user_model()
+
+
+class UserProfileInline(admin.StackedInline):
+    model = models.UserProfile
+    can_delete = False
+    verbose_name_plural = 'profile'
+
+try:
+    admin.site.unregister(User)
+except Exception:
+    pass
+
+class UserAdmin(DjangoUserAdmin):
+    inlines = (UserProfileInline,)
+
+admin.site.register(User, UserAdmin)
 
 
 @admin.register(models.PurchaseRequest)
