@@ -8,8 +8,11 @@ from . import models, serializers
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from drf_spectacular.utils import extend_schema, OpenApiExample
+from . import serializers as local_serializers
 
 
+@extend_schema(responses=local_serializers.HealthSerializer, description='Public health check')
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):
@@ -32,6 +35,7 @@ class TokenObtainPairViewCustom(TokenObtainPairView):
     pass
 
 
+@extend_schema(responses=local_serializers.UserSerializer)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def me(request):
@@ -42,6 +46,11 @@ def me(request):
     return Response(serializer.data)
 
 
+@extend_schema(
+    request=local_serializers.RoleAssignSerializer,
+    responses={200: local_serializers.RoleAssignResponseSerializer},
+    description='Admin endpoint to assign role to a user. Staff only.'
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def assign_role(request):
@@ -77,12 +86,47 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
+    @extend_schema(
+        request=serializers.PurchaseRequestSerializer,
+        responses={201: serializers.PurchaseRequestSerializer},
+        examples=[
+            OpenApiExample(
+                'CreatePR',
+                summary='Create purchase request example',
+                value={
+                    'title': 'New office chair',
+                    'description': 'Ergonomic chair for dev',
+                    'amount': '250.00',
+                    'currency': 'USD',
+                    'items': [
+                        {'description': 'Ergonomic chair', 'quantity': 1, 'unit_price': '250.00'}
+                    ]
+                },
+                request_only=True,
+            )
+        ],
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
             return super().get_queryset()
         return super().get_queryset().filter(created_by=user)
 
+    @extend_schema(
+        request=local_serializers.ApproveActionSerializer,
+        responses={200: OpenApiExample('ApproveResponse', value={'status': 'APPROVED'})},
+        examples=[
+            OpenApiExample(
+                'ApproveExample',
+                summary='Approve PR level 2',
+                value={'level': 2, 'comment': 'Approved for procurement'},
+                request_only=True,
+            )
+        ],
+    )
     @action(detail=True, methods=['patch'], url_path='approve')
     def approve(self, request, pk=None):
         pr = self.get_object()

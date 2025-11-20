@@ -70,3 +70,19 @@ class RoleAssignSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()
     role = serializers.ChoiceField(choices=[r[0] for r in models.UserProfile.ROLE_CHOICES])
 
+
+class RoleAssignResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    user_id = serializers.IntegerField()
+    role = serializers.CharField()
+
+
+class HealthSerializer(serializers.Serializer):
+    status = serializers.CharField()
+    service = serializers.CharField()
+
+
+class ApproveActionSerializer(serializers.Serializer):
+    level = serializers.IntegerField(required=False, default=1)
+    comment = serializers.CharField(required=False, allow_blank=True)
+
