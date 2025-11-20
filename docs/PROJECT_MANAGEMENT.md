@@ -52,7 +52,8 @@ Purpose
   - Description: Provide Swagger/OpenAPI or Postman collection; Dockerized app; public deployment URL.
   - Priority: High
   - Owner: Backend/DevOps
-  - Acceptance Criteria: API docs served at `/api/docs/`; `docker-compose up --build` runs locally; live URL provided in README.
+  - Acceptance Criteria: API docs served at `/api/docs/` and raw schema at `/api/schema/`; `docker-compose up --build` runs locally; live URL provided in README.
+  - Documentation Requirements: The OpenAPI/Swagger docs must include, per-route, the HTTP method, request/response schemas, authentication requirement, and required role(s). The Swagger UI must support trying endpoints with JWT auth.
 
 2. Requirements (condensed from SRS)
 - Functional: authentication & RBAC; PR create/update/list/view; approval endpoints; PO generation; file uploads; document extraction; receipt validation.

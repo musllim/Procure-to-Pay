@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
+    'drf_spectacular',
     'p2p',
 ]
 
@@ -81,11 +82,19 @@ WSGI_APPLICATION = 'procure_to_pay.wsgi.application'
 # Database configuration
 # Prefer DATABASE_URL (Postgres) environment variable; fallback to sqlite
 DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL and dj_database_url:
+if not DATABASE_URL:
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured(
+        'DATABASE_URL environment variable is required and must point to a Postgres instance. '
+        'Example: postgres://user:password@host:5432/dbname'
+    )
+
+if dj_database_url:
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600),
     }
-elif DATABASE_URL:
+else:
     parsed = urllib.parse.urlparse(DATABASE_URL)
     DATABASES = {
         'default': {
@@ -95,13 +104,6 @@ elif DATABASE_URL:
             'PASSWORD': parsed.password,
             'HOST': parsed.hostname,
             'PORT': parsed.port or '',
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 
@@ -158,5 +160,19 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Procure-to-Pay API',
+    'DESCRIPTION': 'API for the Procure-to-Pay mini system (Purchase Requests, Approvals, POs, Receipts).',
+    'VERSION': '1.0.0',
+    'CONTACT': {
+        'name': 'Project Owner',
+        'email': 'dev@example.com',
+    },
+    'LICENSE': {
+        'name': 'MIT'
+    },
 }
 

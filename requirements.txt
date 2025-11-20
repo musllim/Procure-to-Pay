@@ -9,13 +9,4 @@ pytesseract
 celery
 redis
 dj-database-url
-Django>=4.2
-djangorestframework
-djangorestframework-simplejwt
-psycopg2-binary
-gunicorn
-pillow
-pdfplumber
-pytesseract
-celery
-redis
+drf-spectacular

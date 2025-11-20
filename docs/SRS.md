@@ -79,7 +79,24 @@ Functional Requirements
 - Email notifications for approval/rejection (configurable). If implemented, use background task worker (Celery + Redis).
 
 API Documentation
+API Documentation
 - Provide API docs (Swagger/OpenAPI or Postman collection) at `/api/docs/` or as repo artifact.
+
+Swagger / OpenAPI Requirement
+- The backend MUST expose an OpenAPI 3.0-compliant schema and a human-friendly Swagger UI.
+- The Swagger UI must be accessible at `/api/docs/` and the raw schema at `/api/schema/`.
+- Every route implemented by the API MUST be described in the OpenAPI schema with:
+  - HTTP method and path
+  - Request schema (body, query params, path params, required fields)
+  - Response schemas (success and common errors)
+  - Authentication requirements (e.g., JWT bearer)
+  - Required role(s) for the operation (e.g., `staff`, `approver_level_1`, `finance`, `admin`) documented in the operation description or `security` field.
+
+Acceptance Criteria for API Documentation
+- The `/api/schema/` endpoint returns a valid OpenAPI 3 JSON document covering all routes.
+- The `/api/docs/` Swagger UI renders the API and allows executing authenticated operations via JWT tokens.
+- Each endpoint includes example request/response bodies or schema references for the main success and common error responses.
+- Documentation is kept up-to-date: any new route added to the codebase appears in the generated schema without manual editing.
 
 Non-Functional Requirements
 
