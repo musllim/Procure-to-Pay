@@ -10,6 +10,21 @@ class RequestItemSerializer(serializers.ModelSerializer):
         model = models.RequestItem
         fields = ('id', 'description', 'quantity', 'unit_price')
 
+    def validate_quantity(self, value):
+        if value is None:
+            return value
+        if int(value) <= 0:
+            raise serializers.ValidationError('quantity must be positive')
+        return value
+
+    def validate_unit_price(self, value):
+        try:
+            if float(value) < 0:
+                raise serializers.ValidationError('unit_price must be non-negative')
+        except Exception:
+            raise serializers.ValidationError('unit_price must be a number')
+        return value
+
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,6 +47,38 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
         for item in items_data:
             models.RequestItem.objects.create(purchase_request=pr, **item)
         return pr
+
+    def update(self, instance, validated_data):
+        # allow updating fields and items; when items present, replace existing items
+        items_data = validated_data.pop('items', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if items_data is not None:
+            instance.items.all().delete()
+            for item in items_data:
+                models.RequestItem.objects.create(purchase_request=instance, **item)
+        return instance
+
+    def to_internal_value(self, data):
+        # Support multipart form where `items` may be a JSON string
+        if 'items' in data and isinstance(data['items'], str):
+            try:
+                import json
+                data = data.copy()
+                data['items'] = json.loads(data['items'])
+            except Exception:
+                # leave as-is and let validation report error
+                pass
+        return super().to_internal_value(data)
+
+    def validate_amount(self, value):
+        try:
+            if float(value) < 0:
+                raise serializers.ValidationError('amount must be non-negative')
+        except Exception:
+            raise serializers.ValidationError('amount must be a number')
+        return value
 
 
 class ApprovalSerializer(serializers.ModelSerializer):
