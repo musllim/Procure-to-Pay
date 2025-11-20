@@ -266,3 +266,35 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response({'detail': 'password updated by staff'})
 
 
+class PurchaseOrderViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only endpoints for Purchase Orders with a PDF download action."""
+
+    queryset = models.PurchaseOrder.objects.all().order_by('-generated_at')
+    serializer_class = serializers.PurchaseOrderSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        # finance and staff can see POs; staff sees related ones, finance sees all
+        user = self.request.user
+        if getattr(user, 'profile', None) and user.profile.role == models.UserProfile.ROLE_FINANCE:
+            return super().get_queryset()
+        # non-finance: restrict to POs for PRs created by the user
+        return super().get_queryset().filter(purchase_request__created_by=user)
+
+    @action(detail=True, methods=['get'], url_path='download')
+    def download(self, request, pk=None):
+        """Return the PO PDF; generate it if not present."""
+        po = self.get_object()
+        if not po.po_document:
+            # generate PDF and save
+            po.generate_pdf()
+
+        # stream file
+        from django.http import FileResponse
+        import os
+
+        fpath = po.po_document.path
+        filename = os.path.basename(fpath)
+        return FileResponse(open(fpath, 'rb'), as_attachment=True, filename=filename)
+
+

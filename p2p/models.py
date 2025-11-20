@@ -1,6 +1,9 @@
 from django.conf import settings
 from django.db import models
 from django.contrib.auth import get_user_model
+import io
+import os
+from django.core.files.base import ContentFile
 
 
 User = get_user_model()
@@ -91,6 +94,78 @@ class PurchaseOrder(models.Model):
 
     def __str__(self):
         return f"PO {self.po_number} for PR#{self.purchase_request_id}"
+
+    def generate_pdf(self):
+        """Generate a simple PO PDF and store it in `po_document`.
+
+        Uses ReportLab to render a basic Purchase Order containing header, vendor, items and totals.
+        """
+        try:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib.units import mm
+            from reportlab.pdfgen import canvas
+        except Exception:
+            raise
+
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+
+        # Header
+        c.setFont('Helvetica-Bold', 16)
+        c.drawString(30 * mm, height - 30 * mm, f'Purchase Order: {self.po_number}')
+        c.setFont('Helvetica', 10)
+        c.drawString(30 * mm, height - 36 * mm, f'Generated: {self.generated_at.strftime("%Y-%m-%d %H:%M:%S")}')
+
+        # Vendor
+        c.setFont('Helvetica-Bold', 12)
+        c.drawString(30 * mm, height - 46 * mm, 'Vendor:')
+        c.setFont('Helvetica', 10)
+        c.drawString(45 * mm, height - 46 * mm, self.vendor_name or '')
+
+        # Items table header
+        y = height - 60 * mm
+        c.setFont('Helvetica-Bold', 10)
+        c.drawString(30 * mm, y, 'Description')
+        c.drawString(120 * mm, y, 'Quantity')
+        c.drawString(140 * mm, y, 'Unit Price')
+        c.drawString(170 * mm, y, 'Total')
+        y -= 6 * mm
+        c.setFont('Helvetica', 10)
+
+        # Items
+        for it in (self.items or []):
+            desc = it.get('description', '')
+            qty = str(it.get('quantity', ''))
+            up = str(it.get('unit_price', ''))
+            total = ''
+            try:
+                total = str(float(it.get('quantity', 0)) * float(it.get('unit_price', 0)))
+            except Exception:
+                total = ''
+            c.drawString(30 * mm, y, desc[:60])
+            c.drawString(120 * mm, y, qty)
+            c.drawString(140 * mm, y, up)
+            c.drawString(170 * mm, y, total)
+            y -= 6 * mm
+            if y < 30 * mm:
+                c.showPage()
+                y = height - 30 * mm
+
+        # Totals
+        c.setFont('Helvetica-Bold', 11)
+        c.drawString(140 * mm, y - 6 * mm, 'Total Amount:')
+        c.drawString(170 * mm, y - 6 * mm, str(self.total_amount or ''))
+
+        c.showPage()
+        c.save()
+
+        buffer.seek(0)
+        fname = f'{self.po_number}.pdf'
+        content = ContentFile(buffer.read())
+        # save to FileField
+        self.po_document.save(fname, content, save=True)
+        buffer.close()
 
 
 class Receipt(models.Model):

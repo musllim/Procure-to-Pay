@@ -11,6 +11,12 @@ class RequestItemSerializer(serializers.ModelSerializer):
         fields = ('id', 'description', 'quantity', 'unit_price')
 
 
+class PurchaseOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.PurchaseOrder
+        fields = ('id', 'po_number', 'vendor_name', 'items', 'total_amount', 'generated_at', 'po_document')
+
+
 class PurchaseRequestSerializer(serializers.ModelSerializer):
     items = RequestItemSerializer(many=True, required=False)
     created_by = serializers.ReadOnlyField(source='created_by.username')

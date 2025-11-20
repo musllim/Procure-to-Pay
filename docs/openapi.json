@@ -127,6 +127,70 @@ paths:
               schema:
                 $ref: '#/components/schemas/Health'
           description: ''
+  /api/purchase-orders/:
+    get:
+      operationId: purchase_orders_list
+      description: Read-only endpoints for Purchase Orders with a PDF download action.
+      tags:
+      - purchase-orders
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PurchaseOrder'
+          description: ''
+  /api/purchase-orders/{id}/:
+    get:
+      operationId: purchase_orders_retrieve
+      description: Read-only endpoints for Purchase Orders with a PDF download action.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this purchase order.
+        required: true
+      tags:
+      - purchase-orders
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+          description: ''
+  /api/purchase-orders/{id}/download/:
+    get:
+      operationId: purchase_orders_download_retrieve
+      description: Return the PO PDF; generate it if not present.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this purchase order.
+        required: true
+      tags:
+      - purchase-orders
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+          description: ''
   /api/requests/:
     get:
       operationId: requests_list
@@ -863,6 +927,36 @@ components:
           writeOnly: true
           nullable: true
           minLength: 1
+    PurchaseOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        po_number:
+          type: string
+          maxLength: 64
+        vendor_name:
+          type: string
+          maxLength: 255
+        items: {}
+        total_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        generated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        po_document:
+          type: string
+          format: uri
+          nullable: true
+      required:
+      - generated_at
+      - id
+      - po_number
     PurchaseRequest:
       type: object
       properties:
