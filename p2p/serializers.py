@@ -32,6 +32,27 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
         fields = ('id', 'po_number', 'vendor_name', 'items', 'total_amount', 'generated_at', 'po_document')
 
 
+class PurchaseRequestMultipartSerializer(serializers.Serializer):
+    title = serializers.CharField(required=False)
+    description = serializers.CharField(required=False, allow_blank=True)
+    amount = serializers.CharField(required=False)
+    currency = serializers.CharField(required=False)
+    items = serializers.CharField(required=False, allow_blank=True, help_text='JSON array string of items')
+    proforma = serializers.FileField(required=False)
+
+    def to_internal_value(self, data):
+        # reuse PurchaseRequestSerializer logic by converting items JSON string into list
+        data = data.copy()
+        if 'items' in data and isinstance(data['items'], str):
+            try:
+                import json
+                data['items'] = json.loads(data['items'])
+            except Exception:
+                # leave as string to allow validation to catch
+                pass
+        return super().to_internal_value(data)
+
+
 class PurchaseRequestSerializer(serializers.ModelSerializer):
     items = RequestItemSerializer(many=True, required=False)
     created_by = serializers.ReadOnlyField(source='created_by.username')

@@ -87,24 +87,24 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 
     @extend_schema(
-        request=serializers.PurchaseRequestSerializer,
+        request=serializers.PurchaseRequestMultipartSerializer,
         responses={201: serializers.PurchaseRequestSerializer},
         examples=[
             OpenApiExample(
-                'CreatePR',
-                summary='Create purchase request example',
+                'CreatePRMultipart',
+                summary='Create purchase request (multipart) example',
                 value={
                     'title': 'New office chair',
                     'description': 'Ergonomic chair for dev',
                     'amount': '250.00',
                     'currency': 'USD',
-                    'items': [
-                        {'description': 'Ergonomic chair', 'quantity': 1, 'unit_price': '250.00'}
-                    ]
+                    'items': '[{"description":"Ergonomic chair","quantity":1,"unit_price":"250.00"}]',
+                    'proforma': '<file>'
                 },
                 request_only=True,
             )
         ],
+        description='Accepts multipart/form-data with `proforma` file and `items` as JSON string (recommended).',
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
@@ -231,6 +231,14 @@ class UserViewSet(viewsets.ModelViewSet):
         if request.user != target and not request.user.is_staff:
             return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
         return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        request=serializers.PurchaseRequestMultipartSerializer,
+        responses={200: serializers.PurchaseRequestSerializer},
+        description='Update purchase request. Use multipart/form-data to include `proforma` file; `items` may be a JSON string.',
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)

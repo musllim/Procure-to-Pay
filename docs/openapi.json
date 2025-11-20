@@ -210,32 +210,31 @@ paths:
           description: ''
     post:
       operationId: requests_create
+      description: Accepts multipart/form-data with `proforma` file and `items` as
+        JSON string (recommended).
       tags:
       - requests
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PurchaseRequestRequest'
+              $ref: '#/components/schemas/PurchaseRequestMultipartRequest'
             examples:
-              CreatePR:
+              CreatePRMultipart:
                 value:
                   title: New office chair
                   description: Ergonomic chair for dev
                   amount: '250.00'
                   currency: USD
-                  items:
-                  - description: Ergonomic chair
-                    quantity: 1
-                    unit_price: '250.00'
-                summary: Create purchase request example
+                  items: '[{"description":"Ergonomic chair","quantity":1,"unit_price":"250.00"}]'
+                  proforma: <file>
+                summary: Create purchase request (multipart) example
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PurchaseRequestRequest'
+              $ref: '#/components/schemas/PurchaseRequestMultipartRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PurchaseRequestRequest'
-        required: true
+              $ref: '#/components/schemas/PurchaseRequestMultipartRequest'
       security:
       - jwtAuth: []
       - bearerAuth: []
@@ -1003,6 +1002,26 @@ components:
       - id
       - status
       - title
+    PurchaseRequestMultipartRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        amount:
+          type: string
+          minLength: 1
+        currency:
+          type: string
+          minLength: 1
+        items:
+          type: string
+          description: JSON array string of items
+        proforma:
+          type: string
+          format: binary
     PurchaseRequestRequest:
       type: object
       properties:
