@@ -1,0 +1,29 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: p2p
+      POSTGRES_USER: p2p
+      POSTGRES_PASSWORD: p2p
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  redis:
+    image: redis:7
+  web:
+    build: .
+    command: bash -c "python manage.py migrate --noinput && gunicorn procure_to_pay.wsgi:application -b 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://p2p:p2p@db:5432/p2p
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=procure_to_pay.settings
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./:/app
+
+volumes:
+  postgres_data:
