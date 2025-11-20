@@ -174,5 +174,18 @@ SPECTACULAR_SETTINGS = {
     'LICENSE': {
         'name': 'MIT'
     },
+    'SECURITY': [
+        {
+            'bearerAuth': []
+        }
+    ],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SECURITY_SCHEMES': {
+        'bearerAuth': {
+            'type': 'http',
+            'scheme': 'bearer',
+            'bearerFormat': 'JWT'
+        }
+    },
 }
 
