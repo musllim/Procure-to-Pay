@@ -8,6 +8,7 @@ pdfplumber
 pytesseract
 celery
 redis
+dj-database-url
 Django>=4.2
 djangorestframework
 djangorestframework-simplejwt
