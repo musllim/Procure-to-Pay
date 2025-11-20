@@ -33,16 +33,18 @@ jobs:
         run: |
           python manage.py spectacular --file generated_openapi.json
 
-      - name: Compare with committed OpenAPI
+        - name: Compare with committed OpenAPI (canonicalized)
         run: |
           python - <<'PY'
-import json,sys
-with open('docs/openapi.json') as f:
-    a=json.load(f)
-with open('generated_openapi.json') as f:
-    b=json.load(f)
-if a!=b:
-    print('OpenAPI mismatch: generated schema differs from committed docs/openapi.json')
-    sys.exit(1)
-print('OpenAPI validated: no differences')
-PY
+    import json,sys
+    with open('docs/openapi.json') as f:
+      a=json.load(f)
+    with open('generated_openapi.json') as f:
+      b=json.load(f)
+    sa = json.dumps(a, sort_keys=True)
+    sb = json.dumps(b, sort_keys=True)
+    if sa!=sb:
+      print('OpenAPI mismatch: generated schema differs from committed docs/openapi.json')
+      sys.exit(1)
+    print('OpenAPI validated: no differences')
+    PY

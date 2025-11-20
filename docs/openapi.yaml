@@ -289,6 +289,7 @@ paths:
   /api/requests/{id}/approve/:
     patch:
       operationId: requests_approve_partial_update
+      description: Approve a purchase request (requires approver role / staff).
       parameters:
       - in: path
         name: id

@@ -126,6 +126,7 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
                 request_only=True,
             )
         ],
+        description='Approve a purchase request (requires approver role / staff).',
     )
     @action(detail=True, methods=['patch'], url_path='approve')
     def approve(self, request, pk=None):
@@ -175,6 +176,8 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='submit-receipt')
     def submit_receipt(self, request, pk=None):
         pr = self.get_object()
+        # Only staff (uploader) can submit receipt for approved PRs — document this
+        # Actual file is provided as multipart/form-data under 'receipt'.
         if pr.status != models.PurchaseRequest.STATUS_APPROVED:
             return Response({'detail': 'Receipt can only be submitted for approved requests'}, status=status.HTTP_400_BAD_REQUEST)
         file_obj = request.FILES.get('receipt')
@@ -185,6 +188,8 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         receipt.validation_result = 'UNVALIDATED'
         receipt.save()
         return Response({'detail': 'Receipt submitted', 'receipt_id': receipt.pk}, status=status.HTTP_201_CREATED)
+
+
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -231,6 +236,11 @@ class UserViewSet(viewsets.ModelViewSet):
         return self.update(request, *args, **kwargs)
 
     @action(detail=True, methods=['post'], url_path='change_password')
+    @extend_schema(
+        request=local_serializers.ChangePasswordSerializer,
+        responses={200: OpenApiExample('ChangePasswordResponse', value={'detail': 'password updated'})},
+        description='Change a user password. Users must provide old_password; staff may change without old_password.'
+    )
     def change_password(self, request, pk=None):
         user = self.get_object()
         # allow staff to change any password without old password; users must provide old_password
@@ -254,3 +264,5 @@ class UserViewSet(viewsets.ModelViewSet):
         user.set_password(new_password)
         user.save()
         return Response({'detail': 'password updated by staff'})
+
+

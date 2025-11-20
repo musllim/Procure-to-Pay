@@ -86,3 +86,18 @@ class ApproveActionSerializer(serializers.Serializer):
     level = serializers.IntegerField(required=False, default=1)
     comment = serializers.CharField(required=False, allow_blank=True)
 
+
+class RejectActionSerializer(serializers.Serializer):
+    level = serializers.IntegerField(required=False, default=1)
+    reason = serializers.CharField()
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=False, allow_blank=True)
+    new_password = serializers.CharField()
+
+
+class SubmitReceiptSerializer(serializers.Serializer):
+    # Represented as metadata for the file upload in docs. Actual endpoint uses multipart file upload.
+    note = serializers.CharField(required=False, allow_blank=True)
+
